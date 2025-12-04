@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+*.swp
+.ipynb_checkpoints
+
+# Django
+*.log
+*.pot
+*.mo
+*.xml
+db.sqlite3
+/media
+/static
+.env
+
+# Virtual Environment
+venv/
+env/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
