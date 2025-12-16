@@ -3,7 +3,10 @@
 from django.db import models
 from django.utils import timezone
 from django.utils.html import mark_safe
+from django.contrib.auth import get_user_model # To reference the custom User model
+from django.utils.html import mark_safe 
 
+User = get_user_model()
 # 1. Category Model
 class Category(models.Model):
     
@@ -57,3 +60,58 @@ class Product(models.Model):
     
     # Optional: Customize the column header in the Admin
     image_tag.short_description = 'Image Preview'
+
+
+# 3. CartItem Model
+class CartItem(models.Model):
+    """
+    Represents a single item in a user's current shopping cart.
+    This model creates a unique combination constraint on user and product.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cart_items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        # Ensures a user can only have one entry for a given product in their cart.
+        unique_together = ('user', 'product')
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} in {self.user.username}'s cart"
+
+# 4. Order Model
+class Order(models.Model):
+    """Represents a final, completed order placed by a user."""
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('SHIPPED', 'Shipped'),
+        ('DELIVERED', 'Delivered'),
+        ('CANCELLED', 'Cancelled'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    created_at = models.DateTimeField(default=timezone.now)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Order {self.id} by {self.user.username} - {self.status}"
+
+# 5. OrderItem Model (Week 4 Logic)
+class OrderItem(models.Model):
+    """
+    Represents a snapshot of a product within a specific order.
+    This ensures order history remains accurate even if product price changes later.
+    """
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT) # Protect ensures product isn't deleted if an order exists
+    name = models.CharField(max_length=255) # Snapshot of product name
+    quantity = models.PositiveIntegerField()
+    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.name} for Order {self.order.id}"
